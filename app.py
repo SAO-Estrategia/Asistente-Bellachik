@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import requests
-import functions
+#import functions
 import openai
 import json
 import os
@@ -20,7 +20,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
-creds = functions.authenticate_google()
+#creds = functions.authenticate_google()
 
 user_threads = {}
 
