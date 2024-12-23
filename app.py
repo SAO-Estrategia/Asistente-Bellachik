@@ -151,6 +151,7 @@ def asistente_bellachik():
         return jsonify({'status': 'success', 'messages': responses}), 200
 
     except Exception as e:
+        print(f'Error inesperado: {str(e)}')
         return jsonify({'status': 'error', 'message': f'Error inesperado: {str(e)}'}), 500
 
 if __name__ == '__main__':
