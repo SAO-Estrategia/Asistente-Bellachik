@@ -29,7 +29,7 @@ def home():
     return "Asistente Bellachik está en línea"
 
 @app.route('/asistente_bellachik', methods=['POST'])
-def asistente_bellachik():
+def asistente_bellachik():   
     try:
         # Obtener datos de la solicitud
         data = request.get_json()
@@ -75,9 +75,9 @@ def asistente_bellachik():
             calendar_manager = GoogleCalendarManager()
             
              # Configuración de Airtable        
-            base_id = "appPxbcEhfogVOxis"
+            base_id = os.getenv("BASE_ID")
             table_name = "Usuarios"
-            access_token = "pathw9Bc7ngfzbTKD.388179deaf58e44731e0dc88782fc801517d26b589322e9122949c06720f1625"
+            access_token = os.getenv("ACCESS_TOKEN")
 
             # Crear instancia del manejador de Airtable
             airtable_manager = AirtablePATManager(base_id, table_name, access_token)
