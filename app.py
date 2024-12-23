@@ -66,8 +66,10 @@ def asistente_bellachik():
                 thread_id=thread_id,
                 run_id=run.id,
             )
-
+        print("Antes de requires_action")
+        print(run)
         if run.status == "requires_action":
+            print("Dentro de requires_action")
             tools_to_call = run.required_action.submit_tool_outputs.tool_calls
             tool_outputs_array = []  # Array para almacenar las respuestas de las herramientas
             
@@ -75,12 +77,12 @@ def asistente_bellachik():
             calendar_manager = GoogleCalendarManager()
             
              # Configuración de Airtable        
-            base_id = "appPxbcEhfogVOxis"
-            table_name = "Usuarios"
-            access_token = "pathw9Bc7ngfzbTKD.388179deaf58e44731e0dc88782fc801517d26b589322e9122949c06720f1625"
+            #base_id = "appPxbcEhfogVOxis"
+            # table_name = "Usuarios"
+            # access_token = "pathw9Bc7ngfzbTKD.388179deaf58e44731e0dc88782fc801517d26b589322e9122949c06720f1625"
 
-            # Crear instancia del manejador de Airtable
-            airtable_manager = AirtablePATManager(base_id, table_name, access_token)
+            # # Crear instancia del manejador de Airtable
+            # airtable_manager = AirtablePATManager(base_id, table_name, access_token)
 
             # Diccionario de mapeo de funciones
             function_map = {
@@ -93,10 +95,11 @@ def asistente_bellachik():
                 "cancel_appointment": calendar_manager.cancel_appointment,
                 
                 # Funciones para AirTable
-                "guardar_usuario_servicio": airtable_manager.guardar_usuario_servicio,
-                "update_user_info": airtable_manager.update_user_info,
-                "leer_registros": airtable_manager.leer_registros,
-                "borrar_registro": airtable_manager.borrar_registro
+                
+                # "guardar_usuario_servicio": airtable_manager.guardar_usuario_servicio,
+                # "update_user_info": airtable_manager.update_user_info,
+                # "leer_registros": airtable_manager.leer_registros,
+                # "borrar_registro": airtable_manager.borrar_registro
                 
             }
             
