@@ -6,8 +6,8 @@ import pickle
 from datetime import datetime, timezone, timedelta
 import sys
 from googleapiclient.discovery import build
-#from google.oauth2.credentials import Credentials
-from google.oauth2.service_account import Credentials
+
+from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
@@ -20,21 +20,53 @@ class GoogleCalendarManager:
         self.service = self._authenticate()
         
     def _authenticate(self):
+        # creds = None
+        
+        # if os.path.exists("token.json"):
+        #     creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+            
+        # if not creds or not creds.valid:
+        #     if creds and creds.expired and creds.refresh_token:
+        #         creds.refresh( Request() )
+        #     else:
+        #         flow = InstalledAppFlow.from_client_secrets_file( "credentials_calendar.json", SCOPES )
+        #         creds = flow.run_local_server(port=0)
+            
+        #     #Save the credentials for the next run
+        #     with open("token.json", "w") as token:
+        #         token.write( creds.to_json() )
+        
+        # return build( "calendar", "v3", credentials=creds )
         """
-        Maneja la autenticación con Google Calendar mediante una Service Account.
+        Maneja la autenticación con Google y devuelve las credenciales.
         """
-        # Leer las credenciales de la variable de entorno
-        credentials_json = os.getenv('CALENDAR_CREDENTIALS')
-        if not credentials_json:
-            raise EnvironmentError("La variable de entorno 'CALENDAR_CREDENTIALS' no está configurada.")
+        creds = None
+        # Verificar si ya existe un token guardado
+        if os.path.exists('token.pickle'):
+            with open('token.pickle', 'rb') as token:
+                creds = pickle.load(token)
 
-        # Convertir el contenido de la variable de entorno en un diccionario JSON
-        credentials_dict = json.loads(credentials_json)
+        # Si no hay credenciales o son inválidas
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                # Cargar credenciales desde la variable de entorno
+                credentials_json = os.getenv('CALENDAR_CREDENTIALS')
+                if not credentials_json:
+                    raise EnvironmentError("La variable de entorno 'CALENDAR_CREDENTIALS' no está configurada.")
+                
+                credentials_dict = json.loads(credentials_json)
 
-        # Crear credenciales desde la Service Account
-        creds = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
+                # Crear el flujo de autenticación
+                flow = InstalledAppFlow.from_client_config(credentials_dict, SCOPES)
+                creds = flow.run_local_server(port=8080)
 
-        # Retornar las credenciales
+            # Guardar el token para futuras ejecuciones
+            with open('token.pickle', 'wb') as token:
+                pickle.dump(creds, token)
+
+        # Crear y devolver el servicio de Google Calendar
         return build("calendar", "v3", credentials=creds)
             
     def list_upcoming_events(self, max_results=10):
