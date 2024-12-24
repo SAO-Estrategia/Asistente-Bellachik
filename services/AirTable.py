@@ -60,6 +60,32 @@ class AirtablePATManager:
             print(f"Error al crear un registro: {e}")
             return None
         
+    def create_airtable_record(self, table_name, dataRequest):
+        """
+        Crea un nuevo registro en Airtable a partir de la información recibida.
+
+        Esta función está pensada para funcionar con la OpenAI Function `create_airtable_record`,
+        que recibe un 'table_name' y un 'dataRequest' con la estructura {'fields': {...}}.
+
+        Args:
+            table_name (str): Nombre de la tabla dentro de la base asumida directamente por el asistente.
+            dataRequest (dict): Objeto con la estructura {'fields': {...}} para crear el registro.
+        
+        Returns:
+            dict: Respuesta de la API de Airtable para el registro creado o None si ocurre error.
+        """
+        # Nota: asumiendo que en Airtable la URL final se compone de tu base_url + el nombre de la tabla.
+        # Por ejemplo, si base_url = "https://api.airtable.com/v0/appId/" y la tabla es "Usuarios",
+        # quedaría "https://api.airtable.com/v0/appId/Usuarios".
+        url = f"{self.base_url}"
+
+        try:
+            response = requests.post(url, headers=self.headers, json=dataRequest)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error al crear un registro en la tabla '{table_name}': {e}")
+            return None
 
     def update_record(self, record_id, fields):
         """
