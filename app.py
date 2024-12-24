@@ -66,8 +66,8 @@ def asistente_bellachik():
                 thread_id=thread_id,
                 run_id=run.id,
             )
-
         if run.status == "requires_action":
+            
             tools_to_call = run.required_action.submit_tool_outputs.tool_calls
             tool_outputs_array = []  # Array para almacenar las respuestas de las herramientas
             
@@ -79,8 +79,8 @@ def asistente_bellachik():
             table_name = "Usuarios"
             access_token = os.getenv("ACCESS_TOKEN")
 
-            # Crear instancia del manejador de Airtable
-            airtable_manager = AirtablePATManager(base_id, table_name, access_token)
+            # # Crear instancia del manejador de Airtable
+            # airtable_manager = AirtablePATManager(base_id, table_name, access_token)
 
             # Diccionario de mapeo de funciones
             function_map = {
@@ -93,10 +93,11 @@ def asistente_bellachik():
                 "cancel_appointment": calendar_manager.cancel_appointment,
                 
                 # Funciones para AirTable
-                "guardar_usuario_servicio": airtable_manager.guardar_usuario_servicio,
-                "update_user_info": airtable_manager.update_user_info,
-                "leer_registros": airtable_manager.leer_registros,
-                "borrar_registro": airtable_manager.borrar_registro
+                
+                # "guardar_usuario_servicio": airtable_manager.guardar_usuario_servicio,
+                # "update_user_info": airtable_manager.update_user_info,
+                # "leer_registros": airtable_manager.leer_registros,
+                # "borrar_registro": airtable_manager.borrar_registro
                 
             }
             
@@ -151,6 +152,7 @@ def asistente_bellachik():
         return jsonify({'status': 'success', 'messages': responses}), 200
 
     except Exception as e:
+        print(f'Error inesperado: {str(e)}')
         return jsonify({'status': 'error', 'message': f'Error inesperado: {str(e)}'}), 500
 
 if __name__ == '__main__':
