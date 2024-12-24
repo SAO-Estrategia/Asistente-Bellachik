@@ -21,35 +21,21 @@ class GoogleCalendarManager:
         
     def _authenticate(self):
         """
-        Maneja la autenticación con Google y devuelve las credenciales.
+        Maneja la autenticación con Google Calendar mediante una Service Account.
         """
-        creds = None
-        # Verificar si ya existe un token guardado
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
-                creds = pickle.load(token)
+        # Leer las credenciales de la variable de entorno
+        credentials_json = os.getenv('CALENDAR_CREDENTIALS')
+        if not credentials_json:
+            raise EnvironmentError("La variable de entorno 'CALENDAR_CREDENTIALS' no está configurada.")
 
-        # Si no hay credenciales o son inválidas
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                # Cargar credenciales desde la variable de entorno
-                credentials_json = os.getenv('CALENDAR_CREDENTIALS')
-                if not credentials_json:
-                    raise EnvironmentError("La variable de entorno 'CALENDAR_CREDENTIALS' no está configurada.")
-                
-                credentials_dict = json.loads(credentials_json)
+        # Convertir el contenido de la variable de entorno en un diccionario JSON
+        credentials_dict = json.loads(credentials_json)
 
-                # Crear el flujo de autenticación
-                flow = InstalledAppFlow.from_client_config(credentials_dict, SCOPES)
-                creds = flow.run_local_server(port=8080)
+        # Crear credenciales desde la Service Account
+        creds = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
 
-            # Guardar el token para futuras ejecuciones
-            with open('token.pickle', 'wb') as token:
-                pickle.dump(creds, token)
-
-        return creds
+        # Retornar las credenciales
+        return build("calendar", "v3", credentials=creds)
             
     def list_upcoming_events(self, max_results=10):
         now = dt.datetime.now().isoformat() + "Z"
