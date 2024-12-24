@@ -66,10 +66,8 @@ def asistente_bellachik():
                 thread_id=thread_id,
                 run_id=run.id,
             )
-        print("Antes de requires_action")
-        print(run)
         if run.status == "requires_action":
-            print("Dentro de requires_action")
+            
             tools_to_call = run.required_action.submit_tool_outputs.tool_calls
             tool_outputs_array = []  # Array para almacenar las respuestas de las herramientas
             
