@@ -35,9 +35,9 @@ class GoogleCalendarManager:
                 creds.refresh(Request())
             else:
                 # Cargar credenciales desde la variable de entorno
-                credentials_json = os.getenv('GOOGLE_CREDENTIALS')
+                credentials_json = os.getenv('CALENDAR_CREDENTIALS')
                 if not credentials_json:
-                    raise EnvironmentError("La variable de entorno 'GOOGLE_CREDENTIALS' no está configurada.")
+                    raise EnvironmentError("La variable de entorno 'CALENDAR_CREDENTIALS' no está configurada.")
                 
                 credentials_dict = json.loads(credentials_json)
 
