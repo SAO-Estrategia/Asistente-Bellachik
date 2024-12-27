@@ -8,15 +8,25 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from googleapiclient.discovery import build
+from dotenv import load_dotenv
 
 from services.GoogleCalendar import GoogleCalendarManager
 from services.AirTable import AirtablePATManager
 from services.Gmail import GmailManager
 from services.GoogleDocs import GoogleDocsManager
+from services.WhatsApp import WhatsApp_Manager
 
 app = Flask(__name__)
 
+load_dotenv()
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
+PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+WHATSAPP_BUSINESS_ID = '439452585928337'
+BASE_URL = f"https://graph.facebook.com/v16.0/{WHATSAPP_BUSINESS_ID}/messages"
+
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
@@ -27,6 +37,48 @@ user_threads = {}
 @app.route("/")
 def home():
     return "Asistente Bellachik está en línea"
+
+app = Flask(__name__)
+
+
+
+@app.route('/send_whatsapp_message', methods=['POST'])
+def send_whatsapp_message():
+    """
+    Endpoint para enviar un mensaje usando WhatsAppManager.
+    Espera un JSON con la estructura:
+    {
+      "phone_number": "<whatsapp_phone_number>",  # Ejemplo: "5491112345678"
+      "message": "Mensaje de prueba"
+    }
+    """
+    whatsapp_manager = WhatsApp_Manager(ACCESS_TOKEN, PHONE_NUMBER_ID)
+
+    body = request.get_json()
+    if not body:
+        return jsonify({"error": "Missing JSON body"}), 400
+
+    phone_number = body.get('phone_number')
+    message = body.get('message')
+
+    if not phone_number or not message:
+        return jsonify({"error": "Missing phone_number or message"}), 400
+
+    # Usamos la clase WhatsAppManager para enviar el mensaje
+    response = whatsapp_manager.send_message(phone_number, message)
+
+    if response.status_code == 200:
+        return jsonify({
+            "status": "success",
+            "data": response.json()
+        }), 200
+    else:
+        return jsonify({
+            "status": "error",
+            "code": response.status_code,
+            "data": response.json()
+        }), response.status_code
+
 
 @app.route('/asistente_bellachik', methods=['POST'])
 def asistente_bellachik():   
@@ -73,6 +125,7 @@ def asistente_bellachik():
             
             # Instanciar el gestor de Google Calendar
             calendar_manager = GoogleCalendarManager()
+    
             
              # Configuración de Airtable        
             base_id = os.getenv("BASE_ID")
@@ -80,7 +133,7 @@ def asistente_bellachik():
             access_token = os.getenv("ACCESS_TOKEN")
 
             # # Crear instancia del manejador de Airtable
-            # airtable_manager = AirtablePATManager(base_id, table_name, access_token)
+            airtable_manager = AirtablePATManager(base_id, table_name, access_token)
 
             # Diccionario de mapeo de funciones
             function_map = {
@@ -94,7 +147,7 @@ def asistente_bellachik():
                 
                 # Funciones para AirTable
                 
-                # "guardar_usuario_servicio": airtable_manager.guardar_usuario_servicio,
+                "create_airtable_record": airtable_manager.create_airtable_record,
                 # "update_user_info": airtable_manager.update_user_info,
                 # "leer_registros": airtable_manager.leer_registros,
                 # "borrar_registro": airtable_manager.borrar_registro
