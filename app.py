@@ -90,13 +90,14 @@ def asistente_bellachik():
 
         user_message = data['message']
         thread_id = data['thread_id']
+        customer = data['customer']  # Información del cliente enviada en el request
         print(f"Mensaje del usuario ({thread_id}): {user_message}")
         
         #En caso de no tener thread_id, se crea un nuevo hilo
-        if thread_id == "":
+        if not thread_id:
             thread = openai.beta.threads.create()
             thread_id = thread.id
-            print(thread.id)
+            print(f"Nuevo thread_id creado: {thread_id}")
         
         # Agregar el mensaje del usuario al hilo
         openai.beta.threads.messages.create(
@@ -118,6 +119,7 @@ def asistente_bellachik():
                 thread_id=thread_id,
                 run_id=run.id,
             )
+            
         if run.status == "requires_action":
             
             tools_to_call = run.required_action.submit_tool_outputs.tool_calls
@@ -129,29 +131,24 @@ def asistente_bellachik():
             
              # Configuración de Airtable        
             base_id = os.getenv("BASE_ID")
-            table_name = "Usuarios"
             access_token = os.getenv("ACCESS_TOKEN")
 
-            # # Crear instancia del manejador de Airtable
-            airtable_manager = AirtablePATManager(base_id, table_name, access_token)
-
+            # Crear instancia del manejador de Airtable
+            airtable_manager = AirtablePATManager(base_id, access_token)
             # Diccionario de mapeo de funciones
             function_map = {
                 #Funciones para GoogleCalendar
-                "create_google_calendar_event": calendar_manager.create_google_calendar_event,
-                "delete_google_calendar_event": calendar_manager.delete_google_calendar_event_by_details,
-                "get_google_calendar_events": calendar_manager.get_google_calendar_events,
-                "update_event_calendar": calendar_manager.update_event,
-                "get_appointments": calendar_manager.get_appointments,   
-                "cancel_appointment": calendar_manager.cancel_appointment,
                 
                 # Funciones para AirTable
-                
-                "create_airtable_record": airtable_manager.create_airtable_record,
-                # "update_user_info": airtable_manager.update_user_info,
-                # "leer_registros": airtable_manager.leer_registros,
-                # "borrar_registro": airtable_manager.borrar_registro
-                
+                "consultar_cliente": lambda intencion_cliente: format_customer_information(customer),
+                #"actualizar_cliente": lambda id_cliente, campos_actualizar: airtable_manager.actualizar_cliente(id_cliente=id_cliente,campos_actualizar=campos_actualizar),
+                "actualizar_cliente": lambda customer: airtable_manager.actualizar_cliente(
+                    id_cliente=customer.get("id_cliente"),
+                    campos_actualizar={
+                        key: value for key, value in customer.items()
+                        if key not in ["id_cliente", "hilo_conversacion"] and value
+                    }
+                )
             }
             
             for tool_call in tools_to_call:
@@ -168,6 +165,8 @@ def asistente_bellachik():
                     try:
                         # Ejecutar la función con los argumentos descompuestos
                         result = function(**tool_arguments)
+                        print("RESULT DEL LLAMDA A LA FUNCION")
+                        print(result)
                         tool_outputs_array.append({
                             "tool_call_id": tool_call.id,
                             "output": json.dumps(result) 
@@ -186,7 +185,7 @@ def asistente_bellachik():
                         "tool_call_id": tool_call.id,
                         "output": json.dumps({"error": f"Tool {tool_name} not implemented"})
                     })
-                
+                # Responder al asistente con la salida
                 run = openai.beta.threads.runs.submit_tool_outputs(
                     thread_id=thread_id,
                     run_id=run.id,
@@ -195,6 +194,12 @@ def asistente_bellachik():
 
         # Obtener mensajes del hilo
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
+        assistant_messages = [
+            msg.content[0].text.value
+            for msg in messages if msg.role == "assistant"
+        ]
+        #last_assistant_message = assistant_messages[-1] if assistant_messages else "No hay mensajes del asistente."
+        
         responses = [
             {"role": msg.role, "content": msg.content[0].text.value, "thread_id": thread_id}
             for msg in messages
@@ -203,10 +208,67 @@ def asistente_bellachik():
         #print(responses)
 
         return jsonify({'status': 'success', 'messages': responses}), 200
+        #return jsonify({'status': 'success', 'message': last_assistant_message, "thread_id": thread_id}), 200
 
     except Exception as e:
         print(f'Error inesperado: {str(e)}')
         return jsonify({'status': 'error', 'message': f'Error inesperado: {str(e)}'}), 500
+
+
+def format_customer_information(customer):
+    """
+    Formatea la información del cliente en una cadena legible.
+
+    Args:
+        customer (dict): Objeto que contiene los datos del cliente.
+
+    Returns:
+        dict: Diccionario con el mensaje formateado.
+    """
+    try:
+        print("Llamando a la funcion")
+        print(customer)
+        # Verificar si hay información suficiente
+        if not customer or all(not customer.get(key) for key in ['nombre_completo', 'telefono_movil', 'correo_electronico']):
+            print("dentro del if")
+            return {
+                "status": "error",
+                "message": "No se encontraron datos suficientes del cliente para mostrar."
+            }
+
+        # Preparar los datos disponibles del cliente
+        datos_cliente = []
+        if customer.get('nombre_completo'):
+            datos_cliente.append(f"- Nombre: {customer['nombre_completo']}")
+        if customer.get('telefono_movil'):
+            datos_cliente.append(f"- Teléfono: {customer['telefono_movil']}")
+        if customer.get('correo_electronico'):
+            datos_cliente.append(f"- Correo: {customer['correo_electronico']}")
+        if customer.get('domicilio'):
+            datos_cliente.append(f"- Domicilio: {customer['domicilio']}")
+        if customer.get('fecha_nacimiento'):
+            datos_cliente.append(f"- Fecha de Nacimiento: {customer['fecha_nacimiento']}")
+        if customer.get('edad'):
+            datos_cliente.append(f"- Edad: {customer['edad']}")
+        if customer.get('sexo'):
+            datos_cliente.append(f"- Sexo: {customer['sexo']}")
+
+        # Generar el mensaje formateado
+        mensaje = "Estos son tus datos registrados:\n" + "\n".join(datos_cliente)
+        
+        print(mensaje);
+
+        return {
+            "status": "success",
+            "message": mensaje
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Ocurrió un error al formatear la información del cliente: {str(e)}"
+        }
+
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0', port=5000)
