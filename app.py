@@ -88,12 +88,6 @@ def asistente_bellachik():
             # Diccionario de mapeo de funciones
             function_map = {
                 #Funciones para GoogleCalendar
-                # "create_google_calendar_event": calendar_manager.create_google_calendar_event,
-                # "delete_google_calendar_event": calendar_manager.delete_google_calendar_event_by_details,
-                # "get_google_calendar_events": calendar_manager.get_google_calendar_events,
-                # "update_event_calendar": calendar_manager.update_event,
-                # "get_appointments": calendar_manager.get_appointments,   
-                # "cancel_appointment": calendar_manager.cancel_appointment,
                 
                 # Funciones para AirTable
                 "consultar_cliente": lambda intencion_cliente: format_customer_information(customer),
@@ -105,24 +99,6 @@ def asistente_bellachik():
                         if key not in ["id_cliente", "hilo_conversacion"] and value
                     }
                 ),
-                
-                # "guardar_usuario_servicio": airtable_manager.guardar_usuario_servicio,
-                # "update_user_info": airtable_manager.update_user_info,
-                # "leer_registros": airtable_manager.leer_registros,
-                # "borrar_registro": airtable_manager.borrar_registro
-                
-                # Funciones para AirTable
-                # "crear_notificacion_asesor": lambda **kwargs: airtable_manager.create_record(
-                #     "Notificaciones", 
-                #     {"fields": {
-                #         "Estado": "Programada",
-                #         #"Cliente relacionado": ["rec12345678"],  # ID ficticio del cliente relacionado
-                #         "Tipo": "Alerta",
-                #         "Asunto": "Solicitud de asesor",
-                #         "Descripción": kwargs.get("mensaje_usuario", "Descripción no proporcionada"),
-                #         "Medio de Envío": "WhatsApp"
-                #     }}
-                # ),
                 
                 # "detect_human_interaction_intent": lambda **kwargs: {
                 #     "Estado": "Programada",
