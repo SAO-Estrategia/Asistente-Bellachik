@@ -85,12 +85,13 @@ def asistente_bellachik():
     try:
         # Obtener datos de la solicitud
         data = request.get_json()
-        if data is None or 'message' not in data or 'thread_id' not in data:
-            return jsonify({'status': 'error', 'message': 'Se requieren los campos "message" y "thread_id" en el JSON.'}), 400
+        if data is None or 'message' not in data or 'customer' not in data:
+            return jsonify({'status': 'error', 'message': 'Se requieren los campos "message" y "customer" en el JSON.'}), 400
 
         user_message = data['message']
-        thread_id = data['thread_id']
+        #thread_id = data['thread_id']
         customer = data['customer']  # Información del cliente enviada en el request
+        thread_id = customer.get('hilo_conversacion')
         print(f"Mensaje del usuario ({thread_id}): {user_message}")
         
         #En caso de no tener thread_id, se crea un nuevo hilo
