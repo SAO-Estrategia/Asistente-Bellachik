@@ -1,16 +1,14 @@
 import requests
 
 class AirtablePATManager:
-    def __init__(self, base_id, table_name, access_token):
+    def __init__(self, base_id, access_token):
         """
         Inicializa el cliente de Airtable con un token de acceso personal.
 
         Args:
             base_id (str): ID de la base de Airtable.
-            table_name (str): Nombre de la tabla dentro de la base.
             access_token (str): Token de acceso personal para autenticar las solicitudes.
         """
-        self.base_url = f"https://api.airtable.com/v0/{base_id}/{table_name}"
         self.base_id = base_id
         self.access_token = access_token
         self.headers = {
@@ -18,7 +16,19 @@ class AirtablePATManager:
             "Content-Type": "application/json",
         }
 
-    def list_records(self, max_records=10, view=None):
+    def _get_table_url(self, table_name):
+        """
+        Construye la URL completa para una tabla específica.
+
+        Args:
+            table_name (str): Nombre de la tabla.
+
+        Returns:
+            str: URL completa de la tabla.
+        """
+        return f"https://api.airtable.com/v0/{self.base_id}/{table_name}"
+
+    def list_records(self, table_name, max_records=10, view=None):
         """
         Lista los registros de la tabla.
 
@@ -33,15 +43,17 @@ class AirtablePATManager:
         if view:
             params["view"] = view
 
+        url = self._get_table_url(table_name)
         try:
-            response = requests.get(self.base_url, headers=self.headers, params=params)
+            response = requests.get(url, headers=self.headers, params=params)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error al listar registros: {e}")
             return None
 
-    def create_record(self, dataRequest):
+
+    def create_record(self, table_name, dataRequest):
         """
         Crea un nuevo registro en la tabla.
 
@@ -51,9 +63,12 @@ class AirtablePATManager:
         Returns:
             dict: Respuesta de la API de Airtable para el registro creado.
         """
-        data = dataRequest
+        url = self._get_table_url(table_name)
+        print(f"CREAMOS LA TABLA: {table_name}")
+        print("con los datos")
+        print(dataRequest)
         try:
-            response = requests.post(self.base_url, headers=self.headers, json=data)
+            response = requests.post(url, headers=self.headers, json=dataRequest)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -87,18 +102,19 @@ class AirtablePATManager:
             print(f"Error al crear un registro en la tabla '{table_name}': {e}")
             return None
 
-    def update_record(self, record_id, fields):
+    def update_record(self, table_name, record_id, fields):
         """
-        Actualiza un registro existente en la tabla.
+        Actualiza un registro existente en una tabla.
 
         Args:
+            table_name (str): Nombre de la tabla.
             record_id (str): ID del registro a actualizar.
             fields (dict): Campos y valores a actualizar.
 
         Returns:
             dict: Respuesta de la API de Airtable para el registro actualizado.
         """
-        url = f"{self.base_url}/{record_id}"
+        url = f"{self._get_table_url(table_name)}/{record_id}"
         data = {"fields": fields}
         try:
             response = requests.patch(url, headers=self.headers, json=data)
@@ -108,17 +124,18 @@ class AirtablePATManager:
             print(f"Error al actualizar el registro: {e}")
             return None
 
-    def delete_record(self, record_id):
+    def delete_record(self, table_name, record_id):
         """
-        Elimina un registro de la tabla.
+        Elimina un registro de una tabla.
 
         Args:
+            table_name (str): Nombre de la tabla.
             record_id (str): ID del registro a eliminar.
 
         Returns:
             dict: Respuesta de la API de Airtable para el registro eliminado.
         """
-        url = f"{self.base_url}/{record_id}"
+        url = f"{self._get_table_url(table_name)}/{record_id}"
         try:
             response = requests.delete(url, headers=self.headers)
             response.raise_for_status()
@@ -367,3 +384,128 @@ class AirtablePATManager:
                 "message": "Ocurrió un error inesperado al crear el registro.",
                 "error": str(e)
             }
+
+    def consultar_cliente(self,client_identifier=None, context=None):
+        """
+        Recupera información del cliente desde la tabla 'Clientes' en Airtable.
+        
+        Args:
+            client_identifier (str): Identificador del cliente (teléfono, correo, etc.).
+            context (dict): Contexto del hilo, incluyendo mensajes previos y el ID del hilo.
+
+        Returns:
+            dict: Información del cliente o mensaje solicitando más datos.
+        """
+        print("DESDE LA FUNCION")
+        print(client_identifier)
+        print(context)
+        try:
+            # Validar el contexto
+            if not context or "thread_id" not in context:
+                return {
+                    "status": "error",
+                    "message": "No se proporcionó suficiente contexto para buscar al cliente."
+                }
+
+            thread_id = context["thread_id"]
+            previous_messages = context.get("previous_messages", [])
+
+            # Extraer información del contexto
+            if not client_identifier:
+                client_identifier = self.extract_identifier_from_messages(previous_messages)
+
+            if not client_identifier:
+                return {
+                    "status": "error",
+                    "message": "No se pudo identificar al cliente. Por favor, proporciona tu nombre completo o número de teléfono."
+                }
+
+            # Buscar el cliente en la tabla 'Clientes'
+            records = self.list_records("Clientes", max_records=100)
+            client_data = None
+
+            for record in records.get("records", []):
+                fields = record.get("fields", {})
+                if (
+                    fields.get("Teléfono Móvil") == client_identifier
+                    or fields.get("Correo electrónico") == client_identifier
+                    or fields.get("Nombre Completo").lower() == client_identifier.lower()
+                ):
+                    client_data = fields
+                    break
+
+            if not client_data:
+                return {
+                    "status": "error",
+                    "message": "No se encontró información del cliente. Por favor, proporciona tus datos."
+                }
+
+            return {
+                "status": "success",
+                "data": client_data
+            }
+
+
+        except Exception as e:
+        
+            return {
+                "status": "error",
+                "message": f"Error inesperado: {str(e)}"
+            }
+
+    def extract_identifier_from_messages(messages):
+        
+        """
+        Extrae un identificador del cliente (teléfono, correo o nombre) de los mensajes previos.
+
+        Args:
+            messages (list): Lista de mensajes previos.
+
+        Returns:
+            str: Identificador encontrado o None.
+        """
+        for message in messages:
+            # Lógica para extraer información del mensaje (simulada)
+            if "@" in message:  # Ejemplo: buscar correos electrónicos
+                return message.strip()
+            elif message.isdigit() and len(message) >= 10:  # Ejemplo: buscar teléfonos
+                return message.strip()
+            elif len(message.split()) >= 2:  # Ejemplo: buscar nombres
+                return message.strip()
+
+        return None
+    
+    def actualizar_cliente(self, id_cliente, campos_actualizar):
+        """
+        Actualiza la información del cliente en la tabla 'Clientes' en Airtable utilizando el ID del registro.
+
+        Args:
+            id_cliente (str): ID del registro del cliente en Airtable.
+            campos_actualizar (dict): Diccionario con los campos y valores a actualizar.
+
+        Returns:
+            dict: Resultado de la operación (éxito o error).
+        """
+        try:
+            # Validar que se proporcione el ID del cliente
+            if not id_cliente:
+                return {"status": "error", "message": "El 'id_cliente' es obligatorio para actualizar el registro."}
+
+            # Validar que haya campos para actualizar
+            if not campos_actualizar or not isinstance(campos_actualizar, dict):
+                return {"status": "error", "message": "Debe proporcionar campos válidos para actualizar."}
+
+            # Usar update_record para actualizar el registro
+            response = self.update_record("Clientes", id_cliente, campos_actualizar)
+
+            if response:
+                return {
+                    "status": "success",
+                    "message": "Información del cliente actualizada exitosamente.",
+                    "data": response
+                }
+            else:
+                return {"status": "error", "message": "No se pudo actualizar el registro en Airtable."}
+
+        except Exception as e:
+            return {"status": "error", "message": f"Error inesperado: {str(e)}"}
